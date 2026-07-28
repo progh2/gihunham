@@ -65,7 +65,7 @@
                 <div class="item" data-id="2" role="button" tabindex="0">2. 자유게시판</div>
                 <div class="item" data-id="3" role="button" tabindex="0">3. 프로젝트 소개</div>
                 <div class="item" data-id="4" role="button" tabindex="0">4. 갤러리</div>
-                <div class="item" data-id="5" role="button" tabindex="0">5. 채팅방</div>
+                <div class="item" data-id="5" role="button" tabindex="0">5. 대화방/방명록 (Ollama AI 대화)</div>
                 <div class="item" data-id="6" role="button" tabindex="0">6. 오락실 (테트리스)</div>
                 <div class="item" data-id="7" role="button" tabindex="0">7. 웹디자인개발기능사 샘플 보기</div>
                 <div class="item" data-id="8" role="button" tabindex="0">8. 화면 테마 변경</div>
@@ -246,6 +246,92 @@
                 write('[SYSTEM]', '타이핑 및 시스템 효과음을 ' + (sfxEnabled ? '켰습니다.' : '껐습니다.'));
             }
 
+            // ── Ollama API & 방명록 관리 ─────────────
+            var currentPage = '1';
+            var ollamaConnected = false;
+            var ollamaModel = 'gemma';
+            var retroFallbacks = [
+                "반갑네! 오늘 하루도 즐거운 PC통신 생활 되게나 ^^",
+                "오호~ 좋은 글이구먼! 하이텔 게시판 자주 찾아주게나.",
+                "껄껄, 모뎀 속도가 답답하긴 해도 레트로 감성이 제맛이지!",
+                "반갑습니다~ 시솝(Sysop)입니다. 방명록 남겨주셔서 고맙습니다!",
+                "크으~ 통신 환경 좋군요! 편하게 대화 나누세요."
+            ];
+
+            function checkOllama(){
+                try {
+                    var controller = new AbortController();
+                    var timer = setTimeout(function(){ controller.abort(); }, 1500);
+                    fetch('http://localhost:11434/api/tags', { signal: controller.signal })
+                        .then(function(r){ return r.json(); })
+                        .then(function(data){
+                            clearTimeout(timer);
+                            if (data && data.models && data.models.length > 0) {
+                                ollamaConnected = true;
+                                ollamaModel = data.models[0].name;
+                            }
+                        })
+                        .catch(function(){ ollamaConnected = false; });
+                } catch(e) { ollamaConnected = false; }
+            }
+            checkOllama();
+
+            function getStoredGuestbook(){
+                try {
+                    var s = localStorage.getItem('bbs_guestbook_messages');
+                    if (s) { return JSON.parse(s); }
+                } catch(e){}
+                return [
+                    { user: 'sysop', text: '어서오세요! 90년대 하이텔 BBS 대화방 & 방명록에 오신 것을 환영합니다 ^^' },
+                    { user: 'modem_kid', text: '오늘 2400bps 모뎀 속도가 유난히 빠르게 느껴지네요 ㅎㅎ' }
+                ];
+            }
+
+            function saveGuestbook(msgs){
+                try {
+                    localStorage.setItem('bbs_guestbook_messages', JSON.stringify(msgs));
+                } catch(e){}
+            }
+
+            function generateAiReply(userText){
+                write('[SYSTEM]', '방장 [sysop] 님이 답글을 작성 중입니다...');
+                var label = ollamaConnected ? 'sysop (Ollama AI:' + ollamaModel + ')' : 'sysop (AI)';
+                if (ollamaConnected) {
+                    var promptText = "너는 1990년대 한국 PC통신(하이텔/나우누리)의 BBS 방장 [sysop]이야. 90년대 통신 말투(예: ^^, ~습니다, 껄껄, 반갑네 등)로 방문자에게 정감있게 2문장 이내로 답해줘.\n\n방문자: " + userText + "\n\nsysop:";
+                    fetch('http://localhost:11434/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model: ollamaModel, prompt: promptText, stream: false })
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(data){
+                        var reply = (data && data.response) ? data.response.trim() : retroFallbacks[Math.floor(Math.random() * retroFallbacks.length)];
+                        var msgs = getStoredGuestbook();
+                        msgs.push({ user: label, text: reply });
+                        saveGuestbook(msgs);
+                        write(label, reply);
+                        playBeepSound();
+                    })
+                    .catch(function(){
+                        var reply = retroFallbacks[Math.floor(Math.random() * retroFallbacks.length)];
+                        var msgs = getStoredGuestbook();
+                        msgs.push({ user: 'sysop (AI)', text: reply });
+                        saveGuestbook(msgs);
+                        write('sysop (AI)', reply);
+                        playBeepSound();
+                    });
+                } else {
+                    setTimeout(function(){
+                        var reply = retroFallbacks[Math.floor(Math.random() * retroFallbacks.length)];
+                        var msgs = getStoredGuestbook();
+                        msgs.push({ user: 'sysop (AI)', text: reply });
+                        saveGuestbook(msgs);
+                        write('sysop (AI)', reply);
+                        playBeepSound();
+                    }, 400);
+                }
+            }
+
             function setActive(id){
                 for (var i = 0; i < menuItems.length; i++) {
                     var on = menuItems[i].getAttribute('data-id') === id;
@@ -255,6 +341,7 @@
             }
 
             function showPage(id){
+                currentPage = id;
                 // 6번: 오락실
                 if (id === '6') {
                     setActive('6');
@@ -283,6 +370,29 @@
                     toggleSfx();
                     return;
                 }
+
+                // 5번: 방명록 & Ollama AI 대화방
+                if (id === '5') {
+                    setActive('5');
+                    playBeepSound();
+                    write('', '--------------------------------------------------------------');
+                    write('', '▶ 5. 대화방 / 방명록 (Ollama AI 가상대화)');
+                    write('', '   하단 입력창에 메시지를 입력하고 Enter를 누르면 방명록에 저장되며,');
+                    write('', '   방장 [sysop] AI 페르소나가 대화에 응답합니다.');
+                    if (ollamaConnected) {
+                        write('[OLLAMA]', '★ 로컬 Ollama API 감지됨! 모델: [' + ollamaModel + '] 연결 완료.');
+                    } else {
+                        write('[SYSTEM]', 'ℹ 로컬호스트 Ollama (localhost:11434) 미연동 — 레트로 챗봇 모드로 실행됩니다.');
+                    }
+                    write('', '--- [ 방 명 록 목 록 ] ---');
+                    var guestMsgs = getStoredGuestbook();
+                    for (var g = 0; g < guestMsgs.length; g++) {
+                        write(guestMsgs[g].user, guestMsgs[g].text);
+                    }
+                    write('[SYSTEM]', '메시지를 작성하거나 메뉴 번호(1~8, 0)를 입력하세요.');
+                    return;
+                }
+
                 var page = pages[id];
                 if (!page) {
                     playBeepSound();
@@ -326,8 +436,25 @@
                 input.value = '';
                 input.focus();
                 if (!v) { return; }
-                write('', 'guest@bbs:~$ ' + v);
-                showPage(v);
+
+                // 단일 메뉴 번호 입력 시 해당 페이지로 이동
+                if (['0','1','2','3','4','5','6','7','8'].indexOf(v) >= 0) {
+                    write('', 'guest@bbs:~$ ' + v);
+                    showPage(v);
+                    return;
+                }
+
+                // 대화방/방명록 (페이지 5)에서 텍스트 입력 시 메시지 등록 및 AI 대답
+                if (currentPage === '5') {
+                    write('guest', v);
+                    var msgs = getStoredGuestbook();
+                    msgs.push({ user: 'guest', text: v });
+                    saveGuestbook(msgs);
+                    generateAiReply(v);
+                } else {
+                    write('', 'guest@bbs:~$ ' + v);
+                    showPage(v);
+                }
             }
 
             input.addEventListener('keydown', function(e){
