@@ -27,6 +27,9 @@
         header .title{font-size:18px;letter-spacing:2px}
         .sub{color:var(--muted);font-size:13px;margin-top:6px}
         .screen{display:flex;margin-top:12px;border:3px solid rgba(173,219,255,0.06);background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(2,8,16,0.4));min-height:520px;position:relative;overflow:hidden}
+        .screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg, rgba(0,0,0,0.18) 0 1px, rgba(0,0,0,0) 1px 3px);z-index:10}
+        body.theme-green{--bg:#031403;--panel:#072907;--accent:#33ff33;--muted:#77ff77;--neon:rgba(51,255,51,0.15);background:linear-gradient(180deg,#072407 0%,var(--bg) 60%)}
+        body.theme-amber{--bg:#190c00;--panel:#2b1600;--accent:#ffb000;--muted:#ffd077;--neon:rgba(255,176,0,0.15);background:linear-gradient(180deg,#2e1700 0%,var(--bg) 60%)}
         .menu{width:220px;flex:0 0 220px;padding:12px;border-right:1px dashed rgba(173,219,255,0.06)}
         .menu .item{padding:8px 10px;border-left:3px solid transparent;color:var(--muted);cursor:pointer;user-select:none}
         .menu .item:hover{background:var(--neon)}
@@ -65,6 +68,8 @@
                 <div class="item" data-id="5" role="button" tabindex="0">5. 채팅방</div>
                 <div class="item" data-id="6" role="button" tabindex="0">6. 오락실 (테트리스)</div>
                 <div class="item" data-id="7" role="button" tabindex="0">7. 웹디자인개발기능사 샘플 보기</div>
+                <div class="item" data-id="8" role="button" tabindex="0">8. 화면 테마 변경</div>
+                <div class="item" data-id="0" role="button" tabindex="0">0. 타이핑 효과음 ON/OFF</div>
                 <div class="hint">번호를 클릭하거나<br />아래에 입력 후 Enter</div>
             </nav>
 
@@ -176,6 +181,71 @@
                 board.scrollTop = board.scrollHeight;
             }
 
+            // ── Web Audio 효과음 & 테마 ─────────────────
+            var audioCtx = null;
+            var sfxEnabled = true;
+            var themes = ['blue', 'green', 'amber'];
+            var themeNames = { blue: '파랑 (기본)', green: '초록 (모노크롬 그린)', amber: '호박색 (모노크롬 앰버)' };
+            var currentThemeIdx = 0;
+
+            function initAudio(){
+                if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+                    var AC = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AC();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+
+            function playClickSound(){
+                if (!sfxEnabled) return;
+                initAudio();
+                if (!audioCtx) return;
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800 + Math.random() * 200, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.02);
+            }
+
+            function playBeepSound(){
+                if (!sfxEnabled) return;
+                initAudio();
+                if (!audioCtx) return;
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            }
+
+            function cycleTheme(){
+                document.body.classList.remove('theme-' + themes[currentThemeIdx]);
+                currentThemeIdx = (currentThemeIdx + 1) % themes.length;
+                if (themes[currentThemeIdx] !== 'blue') {
+                    document.body.classList.add('theme-' + themes[currentThemeIdx]);
+                }
+                playBeepSound();
+                write('[SYSTEM]', '화면 테마를 변경했습니다: ' + themeNames[themes[currentThemeIdx]]);
+            }
+
+            function toggleSfx(){
+                sfxEnabled = !sfxEnabled;
+                if (sfxEnabled) playBeepSound();
+                write('[SYSTEM]', '타이핑 및 시스템 효과음을 ' + (sfxEnabled ? '켰습니다.' : '껐습니다.'));
+            }
+
             function setActive(id){
                 for (var i = 0; i < menuItems.length; i++) {
                     var on = menuItems[i].getAttribute('data-id') === id;
@@ -185,26 +255,42 @@
             }
 
             function showPage(id){
-                // 6번은 페이지 이동(오락실)
+                // 6번: 오락실
                 if (id === '6') {
                     setActive('6');
+                    playBeepSound();
                     write('[SYSTEM]', '오락실로 접속합니다... 잠시만 기다려 주세요.');
                     setTimeout(function(){ window.location.href = 'tettris.html'; }, 350);
                     return;
                 }
-                // 7번은 새 창으로 열기(웹디자인개발기능사 샘플)
+                // 7번: 웹디자인개발기능사 샘플
                 if (id === '7') {
                     setActive('7');
+                    playBeepSound();
                     write('[SYSTEM]', '웹디자인개발기능사 샘플 페이지를 새 창으로 엽니다.');
                     window.open('webdesigndev.html', '_blank', 'noopener');
                     return;
                 }
+                // 8번: 테마 변경
+                if (id === '8') {
+                    setActive('8');
+                    cycleTheme();
+                    return;
+                }
+                // 0번: 효과음 토글
+                if (id === '0') {
+                    setActive('0');
+                    toggleSfx();
+                    return;
+                }
                 var page = pages[id];
                 if (!page) {
-                    write('[ERROR]', '잘못된 번호입니다: "' + id + '" — 1~7 사이의 숫자를 입력하세요.', true);
+                    playBeepSound();
+                    write('[ERROR]', '잘못된 번호입니다: "' + id + '" — 메뉴 번호를 확인하세요.', true);
                     return;
                 }
                 setActive(id);
+                playBeepSound();
                 write('', '--------------------------------------------------------------');
                 write('', '▶ ' + id + '. ' + page.title);
                 for (var i = 0; i < page.body.length; i++) {
@@ -245,6 +331,7 @@
             }
 
             input.addEventListener('keydown', function(e){
+                playClickSound();
                 if (e.key === 'Enter') { e.preventDefault(); handleInput(); }
             });
             goBtn.addEventListener('click', handleInput);
