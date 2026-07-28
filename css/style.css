@@ -236,7 +236,15 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--sub);outline-offset
   .col-banner,.col-link{flex:1 1 calc(50% - 15px)}
 }
 @media (max-width:768px){
-  .slide-text strong{font-size:26px}
+  #header .inner{align-items:center;text-align:center}
+  #gnb{width:100%}
+  .menu{width:100%;justify-content:space-between}
+  .menu > li{flex:1}
+  .menu > li > a{min-width:auto;padding:10px 2px;font-size:15px}
+  .sub-bg{height:180px}
+  .sub a{padding:6px 2px;font-size:13px}
+  .slide-text strong{font-size:24px}
+  .slide-text span{font-size:14px}
   #contents .inner{flex-direction:column}
   .col-banner,.col-link{flex:1 1 100%}
   #footer .inner{flex-direction:column;padding-top:16px;padding-bottom:16px}
