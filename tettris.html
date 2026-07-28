@@ -61,11 +61,12 @@
         .minis{display:flex;gap:10px}
         .mini{border:1px solid rgba(173,219,255,0.06);background:rgba(0,0,0,0.15);padding:6px}
         .mini .cap{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
-        .pad{display:none;gap:6px;margin-top:10px;flex-wrap:wrap}
-        .pad .btn{padding:10px 14px;font-size:16px}
+        .pad{display:none;gap:8px;margin-top:14px;justify-content:center;touch-action:manipulation;user-select:none}
+        .pad .btn{flex:1 1 45px;min-height:50px;padding:12px 8px;font-size:18px;font-weight:bold;background:rgba(2,40,77,0.7);border:1px solid var(--muted);border-radius:6px;color:var(--accent);text-shadow:0 0 6px rgba(155,211,255,0.4)}
+        .pad .btn:active{background:var(--muted);color:#00163a}
         @media(max-width:700px){
             .menu{display:none}
-            .screen{min-height:700px}
+            .screen{min-height:680px}
             pre.ascii-box{font-size:8px}
             .pad{display:flex}
         }
@@ -829,10 +830,10 @@
         /* ══════════════════════════════════════════════
            5. 입력 : 키보드 / 메뉴 / 커맨드
            ══════════════════════════════════════════════ */
-        var GAME_KEYS = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Spacebar','z','Z','x','X','c','C','p','P','m','M'];
+        var GAME_KEYS = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Spacebar','Enter','z','Z','x','X','c','C','p','P','m','M'];
 
         function handleKey(key){
-            if (game.state === 'ready') {
+            if (game.state === 'ready' || game.state === 'over') {
                 newGame();
                 return;
             }
