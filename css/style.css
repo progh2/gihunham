@@ -1,0 +1,244 @@
+@charset "utf-8";
+
+/* ============================================================
+   웹디자인개발기능사 공개과제 ① JUST 쇼핑몰
+   컬러 가이드 : 배경 #ffffff / 텍스트 #333333 / 주조색·보조색 자유
+   ============================================================ */
+
+/* ===== 0. 공통 / 초기화 ===== */
+*{box-sizing:border-box}
+html,body,h1,h2,h3,p,ul,ol,li,figure,figcaption,dl,dt,dd{margin:0;padding:0}
+ul,ol{list-style:none}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;vertical-align:top}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+
+:root{
+  --main:#111111;      /* 주조색 */
+  --sub:#ff3b5c;       /* 보조색 */
+  --bg:#ffffff;        /* 배경색(지정) */
+  --text:#333333;      /* 기본 텍스트(지정) */
+  --gray:#767676;
+  --line:#e5e5e5;
+  --inner:1200px;      /* 와이어프레임: 1200px 가운데 정렬 */
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:"맑은 고딕","Malgun Gothic",AppleSDGothicNeo-Regular,sans-serif;
+  font-size:15px;
+  line-height:1.5;
+}
+
+/* 1200px 가운데 정렬 공통 박스 */
+.inner{width:100%;max-width:var(--inner);margin:0 auto;padding:0 20px}
+
+/* 화면에서 숨기고 스크린리더에만 제공 */
+.blind{
+  position:absolute;width:1px;height:1px;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap
+}
+/* 키보드 접근용 건너뛰기 링크 */
+.skip{position:absolute;left:0;top:-60px;z-index:200;padding:10px 16px;
+  background:var(--main);color:#fff;transition:top .2s}
+.skip:focus{top:0}
+
+/* 포커스 표시(Tab 키 이동 확인용) */
+a:focus-visible,button:focus-visible{outline:2px solid var(--sub);outline-offset:2px}
+
+/* 타이틀 텍스트 위계 */
+.sec-tit{font-size:20px;font-weight:700;color:var(--main);letter-spacing:-.02em}
+.sec-tit-sm{font-size:16px;font-weight:700;color:var(--main)}
+
+
+/* ===== A. Header (100PX) ===== */
+#header{border-bottom:1px solid var(--line);background:#fff;position:relative;z-index:50}
+#header .inner{
+  min-height:100px;display:flex;align-items:center;justify-content:space-between;gap:20px
+}
+/* A.1 로고 : 200 x 40 워드타입 */
+.logo img{width:200px;height:40px}
+
+/* A.2 메뉴 구성 */
+#gnb{position:relative}
+.menu{display:flex}
+.menu > li{position:relative;text-align:center}
+.menu > li > a{
+  display:block;min-width:130px;padding:14px 10px;
+  font-size:17px;font-weight:700;color:var(--main)
+}
+/* (1) 메인 메뉴 mouse over 하이라이트 */
+.menu > li:hover > a,
+.menu > li:focus-within > a{background:var(--main);color:#fff}
+
+/* (2) 서브 메뉴 영역 : 부드럽게 나타나고 사라짐 */
+.sub{
+  position:absolute;left:0;top:100%;width:100%;
+  padding:12px 0;
+  opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:opacity .3s ease,transform .3s ease,visibility .3s
+}
+.sub a{display:block;padding:8px 6px;font-size:14px;color:#fff}
+/* 서브 메뉴 하이라이트 */
+.sub a:hover,.sub a:focus{background:var(--sub);color:#fff;font-weight:700}
+
+/* 서브 메뉴 영역 배경(메인 콘텐츠를 고려한 배경색) */
+.sub-bg{
+  position:absolute;left:0;top:100%;width:100%;height:190px;
+  background:var(--main);
+  opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s
+}
+/* 메뉴 영역 전체에 hover/focus 시 서브 메뉴 노출 */
+#gnb:hover .sub,#gnb:focus-within .sub,
+#gnb:hover .sub-bg,#gnb:focus-within .sub-bg{
+  opacity:1;visibility:visible;transform:translateY(0)
+}
+
+
+/* ===== B. Slide (300PX) - 위에서 아래로 이동하며 전환 ===== */
+#slide{position:relative;height:300px;overflow:hidden;background:#000}
+.slide-track{
+  position:absolute;left:0;top:0;width:100%;height:100%;
+  transition:transform .7s ease
+}
+.slide-item{position:relative;width:100%;height:100%;overflow:hidden}
+.slide-item img{width:100%;height:100%;object-fit:cover}
+.slide-text{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:100%;max-width:var(--inner);padding:0 20px;
+  color:#fff;text-align:center;text-shadow:0 2px 12px rgba(0,0,0,.55)
+}
+.slide-text strong{display:block;font-size:38px;font-weight:800;letter-spacing:-.03em}
+.slide-text span{display:block;margin-top:10px;font-size:16px;font-weight:400}
+
+/* 슬라이드 현재 위치 표시 */
+.slide-nav{
+  position:absolute;right:0;left:0;bottom:16px;
+  display:flex;justify-content:center;gap:8px;z-index:5
+}
+.slide-nav button{
+  width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.5)
+}
+.slide-nav button[aria-current="true"]{background:var(--sub);width:26px;border-radius:5px}
+
+
+/* ===== C. Contents (200PX) ===== */
+#contents{border-bottom:1px solid var(--line)}
+#contents .inner{
+  display:flex;gap:30px;align-items:stretch;
+  min-height:200px;padding-top:24px;padding-bottom:24px
+}
+.col-notice{flex:1 1 42%;min-width:0}
+.col-banner{flex:1 1 23%;min-width:0}
+.col-link{flex:1 1 35%;min-width:0}
+
+/* C.1 공지사항 / C.2 갤러리 - 탭 구성 */
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--main)}
+.tabs button{
+  padding:8px 18px;font-size:15px;font-weight:700;color:var(--gray);
+  background:#f5f5f5;border-radius:6px 6px 0 0
+}
+.tabs button[aria-selected="true"]{background:var(--main);color:#fff}
+.tab-panel{padding-top:14px}
+.tab-panel[hidden]{display:none}
+
+/* 공지사항 목록 */
+.notice-list li{border-bottom:1px dotted var(--line)}
+.notice-list a{
+  display:flex;justify-content:space-between;gap:14px;align-items:center;
+  padding:7px 2px;font-size:14px
+}
+.notice-list a:hover .n-tit,.notice-list a:focus .n-tit{color:var(--sub);text-decoration:underline}
+.n-tit{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.n-date{flex:0 0 auto;color:var(--gray);font-size:13px}
+
+/* 갤러리 : 이미지 3개 가로 배치 */
+.gallery{display:flex;gap:10px}
+.gallery li{flex:1 1 33.333%}
+.gallery img{width:100%;height:104px;object-fit:cover;border-radius:4px}
+.gallery a:hover img,.gallery a:focus img{opacity:.7;transition:opacity .3s}
+
+/* C.3 배너 (HTML 코딩) */
+.banner{
+  height:100%;display:flex;flex-direction:column;justify-content:center;
+  padding:20px;border-radius:8px;color:#fff;
+  background:linear-gradient(135deg,var(--main) 0%,#3a3a3a 60%,var(--sub) 100%)
+}
+.banner .b-sub{font-size:13px;letter-spacing:.08em;opacity:.85}
+.banner .b-tit{margin:6px 0 4px;font-size:24px;font-weight:800;letter-spacing:-.03em}
+.banner .b-txt{font-size:13px;opacity:.9}
+.banner .b-more{
+  align-self:flex-start;margin-top:12px;padding:6px 14px;
+  border:1px solid rgba(255,255,255,.7);border-radius:20px;font-size:12px
+}
+.banner .b-more:hover,.banner .b-more:focus{background:#fff;color:var(--main)}
+
+/* C.4 바로가기 (HTML 코딩) */
+.shortcut{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.shortcut li{flex:1 1 calc(25% - 8px);min-width:80px}
+.shortcut a{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:12px 4px;border:1px solid var(--line);border-radius:8px;
+  font-size:13px;text-align:center
+}
+.shortcut a:hover,.shortcut a:focus{border-color:var(--main);background:#fafafa}
+.ico{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--main);color:#fff;font-size:15px;font-weight:700
+}
+.shortcut a:hover .ico,.shortcut a:focus .ico{background:var(--sub)}
+
+
+/* ===== D. Footer (100PX) ===== */
+#footer{background:#f7f7f7}
+#footer .inner{
+  min-height:100px;display:flex;align-items:center;justify-content:space-between;gap:24px
+}
+/* 로고 grayscale(무채색) */
+.foot-logo img{width:170px;height:34px;filter:grayscale(100%);opacity:.65}
+.copyright{flex:1;text-align:center;font-size:13px;color:var(--gray);line-height:1.7}
+.sns{display:flex;gap:8px}
+.sns a{
+  width:34px;height:34px;border-radius:50%;background:#ddd;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700
+}
+.sns a:hover,.sns a:focus{background:var(--main)}
+
+
+/* ===== 레이어 팝업 (공지사항 첫 번째 글) ===== */
+.layer{position:fixed;left:0;top:0;width:100%;height:100%;z-index:100}
+.layer[hidden]{display:none}
+.layer-dim{position:absolute;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.45)}
+.layer-box{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:92%;max-width:460px;background:#fff;border-radius:8px;overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,.3)
+}
+.layer-head{padding:16px 20px;background:var(--main);color:#fff}
+.layer-head h2{font-size:17px;font-weight:700}
+.layer-body{padding:20px;font-size:14px;line-height:1.8}
+.layer-body p + p{margin-top:10px}
+.layer-foot{padding:0 20px 20px;text-align:right}
+.btn-close{
+  padding:8px 20px;border-radius:4px;background:var(--main);color:#fff;font-size:14px
+}
+.btn-close:hover,.btn-close:focus{background:var(--sub)}
+
+
+/* ===== 다양한 해상도 대응 ===== */
+@media (max-width:1024px){
+  #header .inner{flex-direction:column;align-items:flex-start;padding-top:14px;padding-bottom:14px}
+  .menu > li > a{min-width:110px;font-size:16px}
+  #contents .inner{flex-wrap:wrap}
+  .col-notice{flex:1 1 100%}
+  .col-banner,.col-link{flex:1 1 calc(50% - 15px)}
+}
+@media (max-width:768px){
+  .slide-text strong{font-size:26px}
+  #contents .inner{flex-direction:column}
+  .col-banner,.col-link{flex:1 1 100%}
+  #footer .inner{flex-direction:column;padding-top:16px;padding-bottom:16px}
+  .copyright{text-align:center}
+}

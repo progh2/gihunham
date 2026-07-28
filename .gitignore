@@ -1,0 +1,31 @@
+# ===== OS =====
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ===== 편집기 / IDE =====
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+
+# ===== 작업용 / 임시 파일 =====
+_check.html
+*.tmp
+*.bak
+*.log
+~$*
+
+# ===== 웹서비스에 사용하지 않는 원본 파일 =====
+*.ai
+*.psd
+*.sketch
+*.fig
+
+# ===== 빌드 / 의존성 (추후 사용 시) =====
+node_modules/
+dist/
+build/

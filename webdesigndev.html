@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUST 쇼핑몰</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<a href="#slide" class="skip">본문 바로가기</a>
+
+<!-- ==================== Ⓐ Header ==================== -->
+<header id="header">
+  <div class="inner">
+    <!-- A.1 로고 : 200×40 워드타입 -->
+    <h1 class="logo">
+      <a href="#">
+        <img src="images/logo.svg" alt="JUST 쇼핑몰" width="200" height="40">
+      </a>
+    </h1>
+
+    <!-- A.2 메뉴 구성 : 메인 메뉴 + 서브 메뉴 -->
+    <nav id="gnb">
+      <h2 class="blind">메인 메뉴</h2>
+      <div class="sub-bg" aria-hidden="true"></div>
+      <ul class="menu">
+        <li>
+          <a href="#">탑</a>
+          <ul class="sub">
+            <li><a href="#">블라우스</a></li>
+            <li><a href="#">티</a></li>
+            <li><a href="#">셔츠</a></li>
+            <li><a href="#">니트</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#">아우터</a>
+          <ul class="sub">
+            <li><a href="#">자켓</a></li>
+            <li><a href="#">코트</a></li>
+            <li><a href="#">가디건</a></li>
+            <li><a href="#">머플러</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#">팬츠</a>
+          <ul class="sub">
+            <li><a href="#">청바지</a></li>
+            <li><a href="#">짧은바지</a></li>
+            <li><a href="#">긴바지</a></li>
+            <li><a href="#">레깅스</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#">악세서리</a>
+          <ul class="sub">
+            <li><a href="#">귀고리</a></li>
+            <li><a href="#">목걸이</a></li>
+            <li><a href="#">반지</a></li>
+            <li><a href="#">팔찌</a></li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+
+<!-- ==================== Ⓑ Slide ==================== -->
+<section id="slide">
+  <h2 class="blind">메인 이미지 슬라이드</h2>
+
+  <div class="slide-track" id="slideTrack">
+    <div class="slide-item">
+      <img src="images/slide1.svg" alt="새 시즌 신상품 컬렉션 이미지">
+      <p class="slide-text">
+        <strong>NEW SEASON, JUST NOW</strong>
+        <span>지금 가장 새로운 스타일을 만나보세요</span>
+      </p>
+    </div>
+
+    <div class="slide-item">
+      <img src="images/slide2.svg" alt="시즌오프 세일 안내 이미지">
+      <p class="slide-text">
+        <strong>SEASON OFF 최대 70%</strong>
+        <span>기다렸던 그 아이템, 지금이 가장 좋은 가격</span>
+      </p>
+    </div>
+
+    <div class="slide-item">
+      <img src="images/slide3.svg" alt="무료배송 및 회원 혜택 안내 이미지">
+      <p class="slide-text">
+        <strong>MEMBERS ONLY BENEFIT</strong>
+        <span>회원가입 즉시 10% 할인쿠폰 · 전 상품 무료배송</span>
+      </p>
+    </div>
+
+    <!-- 무한 반복용 첫 번째 이미지 복제본 -->
+    <div class="slide-item" aria-hidden="true">
+      <img src="images/slide1.svg" alt="">
+      <p class="slide-text">
+        <strong>NEW SEASON, JUST NOW</strong>
+        <span>지금 가장 새로운 스타일을 만나보세요</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="slide-nav" id="slideNav">
+    <button type="button" aria-current="true"><span class="blind">1번 슬라이드 보기</span></button>
+    <button type="button" aria-current="false"><span class="blind">2번 슬라이드 보기</span></button>
+    <button type="button" aria-current="false"><span class="blind">3번 슬라이드 보기</span></button>
+  </div>
+</section>
+
+
+<!-- ==================== Ⓒ Contents ==================== -->
+<section id="contents">
+  <h2 class="blind">메인 콘텐츠</h2>
+  <div class="inner">
+
+    <!-- C.1 공지사항 / C.2 갤러리 : 탭으로 구성 -->
+    <div class="col-notice">
+      <h3 class="blind">공지사항 및 갤러리</h3>
+      <div class="tabs" role="tablist" aria-label="공지사항 갤러리 탭">
+        <button type="button" role="tab" id="tabNotice"
+                aria-selected="true" aria-controls="panelNotice">공지사항</button>
+        <button type="button" role="tab" id="tabGallery"
+                aria-selected="false" aria-controls="panelGallery">갤러리</button>
+      </div>
+
+      <div class="tab-panel" id="panelNotice" role="tabpanel" aria-labelledby="tabNotice">
+        <ul class="notice-list">
+          <li>
+            <!-- 첫 번째 콘텐츠 클릭 시 레이어 팝업 -->
+            <a href="#" id="noticeFirst">
+              <span class="n-tit">[안내] 추석 연휴 배송 일정 및 고객센터 운영 안내</span>
+              <span class="n-date">2026.07.20</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="n-tit">가을 신상품 입고 및 사전예약 혜택 안내</span>
+              <span class="n-date">2026.07.14</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="n-tit">개인정보처리방침 개정 안내 (시행일 2026.08.01)</span>
+              <span class="n-date">2026.07.03</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <span class="n-tit">멤버십 등급 산정 기준 변경 안내</span>
+              <span class="n-date">2026.06.27</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="tab-panel" id="panelGallery" role="tabpanel" aria-labelledby="tabGallery" hidden>
+        <ul class="gallery">
+          <li><a href="#"><img src="images/gallery1.svg" alt="가을 니트 코디 갤러리 이미지"></a></li>
+          <li><a href="#"><img src="images/gallery2.svg" alt="아우터 신상품 갤러리 이미지"></a></li>
+          <li><a href="#"><img src="images/gallery3.svg" alt="악세서리 기획전 갤러리 이미지"></a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- C.3 배너 : HTML 코딩 -->
+    <div class="col-banner">
+      <h3 class="blind">배너</h3>
+      <div class="banner">
+        <span class="b-sub">JUST MEMBERSHIP</span>
+        <strong class="b-tit">첫 구매 10%</strong>
+        <span class="b-txt">신규 회원 전용 할인 쿠폰을 지금 받아가세요.</span>
+        <a href="#" class="b-more">쿠폰 받기</a>
+      </div>
+    </div>
+
+    <!-- C.4 바로가기 : HTML 코딩 -->
+    <div class="col-link">
+      <h3 class="sec-tit-sm">바로가기</h3>
+      <ul class="shortcut">
+        <li><a href="#"><span class="ico" aria-hidden="true">쇼</span>전체상품</a></li>
+        <li><a href="#"><span class="ico" aria-hidden="true">주</span>주문조회</a></li>
+        <li><a href="#"><span class="ico" aria-hidden="true">장</span>장바구니</a></li>
+        <li><a href="#"><span class="ico" aria-hidden="true">교</span>교환·반품</a></li>
+        <li><a href="#"><span class="ico" aria-hidden="true">쿠</span>쿠폰함</a></li>
+        <li><a href="#"><span class="ico" aria-hidden="true">Q</span>Q&amp;A</a></li>
+        <li><a href="#"><span class="ico" aria-hidden="true">리</span>상품후기</a></li>
+        <li><a href="#"><span class="ico" aria-hidden="true">고</span>고객센터</a></li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ==================== Ⓓ Footer ==================== -->
+<footer id="footer">
+  <h2 class="blind">사이트 정보</h2>
+  <div class="inner">
+    <!-- 로고 grayscale(무채색) -->
+    <p class="foot-logo">
+      <a href="#">
+        <img src="images/logo.svg" alt="JUST 쇼핑몰" width="170" height="34">
+      </a>
+    </p>
+
+    <p class="copyright">
+      서울특별시 중구 세종대로 000 JUST타워 &nbsp;|&nbsp; 대표 홍길동 &nbsp;|&nbsp; 사업자등록번호 000-00-00000<br>
+      Copyright &copy; JUST SHOPPING MALL. All rights reserved.
+    </p>
+
+    <div class="sns">
+      <a href="#"><span class="blind">페이스북</span><span aria-hidden="true">f</span></a>
+      <a href="#"><span class="blind">인스타그램</span><span aria-hidden="true">in</span></a>
+      <a href="#"><span class="blind">유튜브</span><span aria-hidden="true">Y</span></a>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==================== 레이어 팝업 ==================== -->
+<div class="layer" id="layerPopup" role="dialog" aria-modal="true" aria-labelledby="layerTitle" hidden>
+  <div class="layer-dim"></div>
+  <div class="layer-box">
+    <div class="layer-head">
+      <h2 id="layerTitle">추석 연휴 배송 일정 및 고객센터 운영 안내</h2>
+    </div>
+    <div class="layer-body">
+      <p>안녕하세요, JUST 쇼핑몰입니다.</p>
+      <p>추석 연휴 기간 택배사 휴무로 인해 배송이 일시 중단됩니다.
+         연휴 직전 주문 건은 순차 발송되며, 평소보다 2~3일 지연될 수 있습니다.</p>
+      <p>고객센터는 연휴 기간 휴무 후 익일 09:00부터 정상 운영됩니다.
+         이용에 불편을 드려 죄송합니다.</p>
+    </div>
+    <div class="layer-foot">
+      <button type="button" class="btn-close" id="btnClose">× 닫기</button>
+    </div>
+  </div>
+</div>
+
+<script src="script/script.js"></script>
+</body>
+</html>

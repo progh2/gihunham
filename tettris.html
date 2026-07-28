@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>함샘의 작업공방BBS - 테트리스</title>
+    <style>
+        :root{
+            --bg:#00163a;       /* 짙은 남색 배경 */
+            --panel:#02284d;
+            --accent:#ffffff;   /* 주요 글자 흰색 */
+            --muted:#9bd3ff;    /* 보조 텍스트 연한 파랑 */
+            --err:#ff8f8f;
+            --neon:rgba(125,210,255,0.12);
+            --mono:"Courier New", Courier, monospace;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0;font-family:var(--mono);background:linear-gradient(180deg,#00223f 0%,var(--bg) 60%);color:var(--accent);-webkit-font-smoothing:antialiased}
+        .wrap{max-width:980px;margin:28px auto;padding:16px}
+        header{border:2px solid rgba(173,219,255,0.08);padding:10px 14px;background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(2,8,16,0.25));box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+        header .title{font-size:18px;letter-spacing:2px}
+        .sub{color:var(--muted);font-size:13px;margin-top:6px}
+        .screen{display:flex;margin-top:12px;border:3px solid rgba(173,219,255,0.06);background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(2,8,16,0.4));min-height:520px;position:relative;overflow:hidden}
+        .menu{width:220px;flex:0 0 220px;padding:12px;border-right:1px dashed rgba(173,219,255,0.06)}
+        .menu .item{padding:8px 10px;border-left:3px solid transparent;color:var(--muted);cursor:pointer;user-select:none}
+        .menu .item:hover{background:var(--neon)}
+        .menu .item:focus-visible{outline:1px dotted var(--accent);outline-offset:-2px}
+        .menu .item.active{border-left-color:var(--muted);color:var(--accent);background:linear-gradient(90deg, rgba(173,219,255,0.03), transparent)}
+        .menu .hint{margin-top:16px;font-size:12px;color:rgba(155,211,255,0.6);line-height:1.6}
+        .main{flex:1;min-width:0;padding:14px;display:flex;flex-direction:column}
+        .ascii-art{color:var(--accent);text-shadow:0 0 10px rgba(125,210,255,0.12);white-space:pre;line-height:0.95;padding:6px 0}
+        pre.ascii-box{margin:0;background:transparent;border:1px solid rgba(173,219,255,0.04);padding:10px;color:var(--accent);overflow:auto;font-size:12px}
+        .board{flex:1;overflow:auto;padding:8px 10px;border-top:1px dashed rgba(173,219,255,0.04);margin-top:8px;min-height:90px;max-height:130px}
+        .line{margin:6px 0;font-size:14px;white-space:pre-wrap;word-break:break-word}
+        .line.err{color:var(--err)}
+        .meta-tag{color:var(--muted);margin-right:8px}
+        .command{display:flex;gap:8px;align-items:center;padding:10px;border-top:1px solid rgba(173,219,255,0.03);background:rgba(0,0,0,0.08);flex-wrap:wrap}
+        .prompt{color:var(--muted);font-size:13px;white-space:nowrap}
+        .input{flex:1;min-width:100px;background:transparent;border:1px dashed rgba(173,219,255,0.08);color:var(--accent);padding:8px;font-family:var(--mono);font-size:14px;outline:none}
+        .input:focus{border-color:var(--muted)}
+        .btn{background:transparent;border:1px solid rgba(173,219,255,0.08);color:var(--accent);padding:6px 12px;cursor:pointer;font-family:var(--mono)}
+        .btn:hover{border-color:var(--accent)}
+
+        /* ── 게임 전용 ───────────────────────────── */
+        .arcade{display:flex;gap:14px;align-items:flex-start;margin-top:8px;flex-wrap:wrap}
+        .cab{position:relative;border:1px solid rgba(173,219,255,0.10);padding:6px;background:rgba(0,0,0,0.28);box-shadow:0 0 22px rgba(125,210,255,0.06) inset}
+        .cab canvas{display:block}
+        /* CRT 주사선 */
+        .cab::after{content:"";position:absolute;inset:6px;pointer-events:none;
+            background:repeating-linear-gradient(180deg, rgba(0,0,0,0.22) 0 1px, rgba(0,0,0,0) 1px 3px)}
+        .side{flex:1;min-width:190px;display:flex;flex-direction:column;gap:10px}
+        pre.panel{margin:0;font-size:12px;line-height:1.35;color:var(--muted);white-space:pre;
+            border:1px solid rgba(173,219,255,0.06);padding:8px;background:rgba(0,0,0,0.15)}
+        pre.panel b{color:var(--accent);font-weight:normal}
+        .minis{display:flex;gap:10px}
+        .mini{border:1px solid rgba(173,219,255,0.06);background:rgba(0,0,0,0.15);padding:6px}
+        .mini .cap{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+        .pad{display:none;gap:6px;margin-top:10px;flex-wrap:wrap}
+        .pad .btn{padding:10px 14px;font-size:16px}
+        @media(max-width:700px){
+            .menu{display:none}
+            .screen{min-height:700px}
+            pre.ascii-box{font-size:8px}
+            .pad{display:flex}
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <div class="title">▶ 하이텔 감성: 오락실 테트리스</div>
+            <div class="sub" id="caption" aria-live="polite">접속 정보를 불러오는 중...</div>
+        </header>
+
+        <div class="screen" role="application" aria-label="BBS 스타일 테트리스">
+            <nav class="menu" aria-label="메뉴">
+                <div class="item active" data-id="1" role="button" tabindex="0">1. 게임 시작 / 재시작</div>
+                <div class="item" data-id="2" role="button" tabindex="0">2. 일시정지 / 계속</div>
+                <div class="item" data-id="3" role="button" tabindex="0">3. 배경음 ON/OFF</div>
+                <div class="item" data-id="4" role="button" tabindex="0">4. 효과음 ON/OFF</div>
+                <div class="item" data-id="5" role="button" tabindex="0">5. 조작법 보기</div>
+                <div class="item" data-id="9" role="button" tabindex="0">9. BBS 메인으로</div>
+                <div class="hint">
+                    번호를 클릭하거나<br />아래에 입력 후 Enter<br /><br />
+                    ← → 이동 / ↓ 소프트드롭<br />
+                    ↑ 또는 X 회전 / Z 역회전<br />
+                    SPACE 하드드롭 / C 홀드<br />
+                    P 일시정지 / M 음악
+                </div>
+            </nav>
+
+            <main class="main">
+                <div class="ascii-art" aria-hidden="true">
+                    <pre class="ascii-box" id="asciiArt">
+ _____ _____ _____ ____  ___ ____
+|_   _| ____|_   _|  _ \|_ _/ ___|
+  | | |  _|   | | | |_) || |\___ \
+  | | | |___  | | |  _ < | | ___) |
+  |_| |_____| |_| |_| \_\___|____/
+
+     ★ 1988 ARCADE MODE ★  아무 키나 눌러 시작
+                    </pre>
+                </div>
+
+                <div class="arcade">
+                    <div class="cab">
+                        <canvas id="field" width="260" height="520" aria-label="테트리스 필드"></canvas>
+                    </div>
+
+                    <div class="side">
+                        <pre class="panel" id="statusPanel"></pre>
+                        <div class="minis">
+                            <div class="mini">
+                                <div class="cap">NEXT</div>
+                                <canvas id="next" width="80" height="80"></canvas>
+                            </div>
+                            <div class="mini">
+                                <div class="cap">HOLD</div>
+                                <canvas id="hold" width="80" height="80"></canvas>
+                            </div>
+                        </div>
+                        <pre class="panel" id="keyPanel"></pre>
+                    </div>
+                </div>
+
+                <div class="pad" aria-label="터치 조작">
+                    <button class="btn" data-key="ArrowLeft" type="button">◀</button>
+                    <button class="btn" data-key="ArrowDown" type="button">▼</button>
+                    <button class="btn" data-key="ArrowRight" type="button">▶</button>
+                    <button class="btn" data-key="ArrowUp" type="button">↻</button>
+                    <button class="btn" data-key=" " type="button">⤓</button>
+                    <button class="btn" data-key="c" type="button">HOLD</button>
+                </div>
+
+                <div class="board" id="board" role="log" aria-live="polite" aria-label="시스템 로그">
+                    <div class="line" id="contentArea"></div>
+                </div>
+
+                <div class="command">
+                    <div class="prompt">guest@bbs:~/tetris$ 번호 입력</div>
+                    <input id="cmd" class="input" autocomplete="off" inputmode="numeric"
+                           aria-label="메뉴 번호 입력" placeholder="예: 1" />
+                    <button id="goBtn" class="btn" type="button">이동</button>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        'use strict';
+
+        /* ══════════════════════════════════════════════
+           0. 공통 DOM / 로그 (webpage.html 과 동일 규약)
+           ══════════════════════════════════════════════ */
+        var menuItems   = document.querySelectorAll('.menu .item');
+        var boardEl     = document.getElementById('board');
+        var contentArea = document.getElementById('contentArea');
+        var input       = document.getElementById('cmd');
+        var goBtn       = document.getElementById('goBtn');
+        var caption     = document.getElementById('caption');
+
+        function pad2(n){ return (n < 10 ? '0' : '') + n; }
+        function formatNow(){
+            var d = new Date();
+            return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()) +
+                   ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+        }
+
+        // HTML 인젝션 방지: 출력은 textContent 로만 추가한다.
+        function write(tag, text, isError){
+            var line = document.createElement('div');
+            line.className = 'line' + (isError ? ' err' : '');
+            if (tag) {
+                var span = document.createElement('span');
+                span.className = 'meta-tag';
+                span.textContent = tag;
+                line.appendChild(span);
+            }
+            line.appendChild(document.createTextNode(text));
+            contentArea.appendChild(line);
+            while (contentArea.childNodes.length > 60) {
+                contentArea.removeChild(contentArea.firstChild);
+            }
+            boardEl.scrollTop = boardEl.scrollHeight;
+        }
+
+        /* ══════════════════════════════════════════════
+           1. 사운드 : WebAudio 칩튠 (외부 파일 없음)
+              배경음 = 코로베이니키(러시아 민요, 퍼블릭 도메인)
+           ══════════════════════════════════════════════ */
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        var actx = null, masterGain, musicGain, sfxGain, noiseBuf;
+        var musicOn = true, sfxOn = true, musicRunning = false;
+        var schedTimer = null, stepIndex = 0, nextNoteTime = 0;
+
+        var SEMI = {C:0,'C#':1,D:2,'D#':3,E:4,'F':5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+        function freqOf(name){
+            var m = /^([A-G]#?)(-?\d)$/.exec(name);
+            if (!m) { return 0; }
+            var midi = SEMI[m[1]] + (parseInt(m[2],10) + 1) * 12;
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        // [음이름, 길이(16분음표 단위)] — 4/4, 한 마디 = 16
+        var MELODY = [
+            ['E5',4],['B4',2],['C5',2],['D5',4],['C5',2],['B4',2],
+            ['A4',4],['A4',2],['C5',2],['E5',4],['D5',2],['C5',2],
+            ['B4',6],['C5',2],['D5',4],['E5',4],
+            ['C5',4],['A4',4],['A4',8],
+            ['-',2],['D5',4],['F5',2],['A5',4],['G5',2],['F5',2],
+            ['E5',6],['C5',2],['E5',4],['D5',2],['C5',2],
+            ['B4',4],['B4',2],['C5',2],['D5',4],['E5',4],
+            ['C5',4],['A4',4],['A4',8],
+            ['E5',8],['C5',8],
+            ['D5',8],['B4',8],
+            ['C5',8],['A4',8],
+            ['G#4',8],['B4',8],
+            ['E5',8],['C5',8],
+            ['D5',8],['B4',8],
+            ['C5',4],['E5',4],['A5',8],
+            ['G#5',16]
+        ];
+        var BASS_ROOTS = ['E2','A2','E2','A2','D2','A2','E2','A2',
+                          'A2','G2','F2','E2','A2','G2','A2','E2'];
+        var TOTAL_STEPS = BASS_ROOTS.length * 16;   // 256
+
+        // 스텝별 이벤트 테이블을 미리 만들어 둔다.
+        var melodyAt = new Array(TOTAL_STEPS);
+        var bassAt   = new Array(TOTAL_STEPS);
+        (function buildTracks(){
+            var t = 0, i;
+            for (i = 0; i < MELODY.length; i++) {
+                if (MELODY[i][0] !== '-') {
+                    melodyAt[t] = { f: freqOf(MELODY[i][0]), d: MELODY[i][1] };
+                }
+                t += MELODY[i][1];
+            }
+            for (var m = 0; m < BASS_ROOTS.length; m++) {
+                var lo = freqOf(BASS_ROOTS[m]);
+                for (var e = 0; e < 8; e++) {
+                    bassAt[m * 16 + e * 2] = { f: (e % 2 === 0 ? lo : lo * 2), d: 2 };
+                }
+            }
+        })();
+
+        function initAudio(){
+            if (actx || !AudioCtx) { return; }
+            actx = new AudioCtx();
+            masterGain = actx.createGain(); masterGain.gain.value = 0.55;
+            musicGain  = actx.createGain(); musicGain.gain.value  = 0.34;
+            sfxGain    = actx.createGain(); sfxGain.gain.value    = 0.5;
+            musicGain.connect(masterGain);
+            sfxGain.connect(masterGain);
+            masterGain.connect(actx.destination);
+
+            var len = Math.floor(actx.sampleRate * 0.25);
+            noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+            var data = noiseBuf.getChannelData(0);
+            for (var i = 0; i < len; i++) { data[i] = Math.random() * 2 - 1; }
+        }
+
+        function tone(dest, f, start, dur, type, vol){
+            if (!actx || !f) { return; }
+            var osc = actx.createOscillator();
+            var g   = actx.createGain();
+            osc.type = type || 'square';
+            osc.frequency.setValueAtTime(f, start);
+            g.gain.setValueAtTime(0.0001, start);
+            g.gain.exponentialRampToValueAtTime(vol, start + 0.008);
+            g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+            osc.connect(g); g.connect(dest);
+            osc.start(start); osc.stop(start + dur + 0.02);
+        }
+
+        function noise(dest, start, dur, vol){
+            if (!actx || !noiseBuf) { return; }
+            var src = actx.createBufferSource(); src.buffer = noiseBuf;
+            var hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6000;
+            var g = actx.createGain();
+            g.gain.setValueAtTime(vol, start);
+            g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+            src.connect(hp); hp.connect(g); g.connect(dest);
+            src.start(start); src.stop(start + dur + 0.01);
+        }
+
+        function sixteenthDur(){
+            var bpm = Math.min(200, 138 + (game.level - 1) * 5);
+            return 60 / bpm / 4;
+        }
+
+        function scheduleStep(step, when){
+            var sd = sixteenthDur();
+            var mel = melodyAt[step];
+            if (mel) { tone(musicGain, mel.f, when, Math.max(0.07, mel.d * sd * 0.92), 'square', 0.30); }
+            var bs = bassAt[step];
+            if (bs) { tone(musicGain, bs.f, when, sd * 1.7, 'triangle', 0.42); }
+            if (step % 2 === 0) { noise(musicGain, when, 0.035, step % 4 === 0 ? 0.14 : 0.07); }
+        }
+
+        function musicScheduler(){
+            if (!actx) { return; }
+            while (nextNoteTime < actx.currentTime + 0.25) {
+                scheduleStep(stepIndex, nextNoteTime);
+                nextNoteTime += sixteenthDur();
+                stepIndex = (stepIndex + 1) % TOTAL_STEPS;
+            }
+        }
+
+        function startMusic(reset){
+            initAudio();
+            if (!actx || !musicOn) { return; }
+            if (actx.state === 'suspended') { actx.resume(); }
+            if (musicRunning) { return; }
+            if (reset) { stepIndex = 0; }
+            nextNoteTime = actx.currentTime + 0.08;
+            musicRunning = true;
+            schedTimer = setInterval(musicScheduler, 25);
+            musicScheduler();
+        }
+
+        function stopMusic(){
+            if (schedTimer) { clearInterval(schedTimer); schedTimer = null; }
+            musicRunning = false;
+        }
+
+        // 효과음
+        function sfx(kind){
+            initAudio();
+            if (!actx || !sfxOn) { return; }
+            if (actx.state === 'suspended') { actx.resume(); }
+            var t = actx.currentTime;
+            if (kind === 'move')      { tone(sfxGain, 220, t, 0.04, 'square', 0.18); }
+            else if (kind === 'rot')  { tone(sfxGain, 440, t, 0.05, 'square', 0.20); tone(sfxGain, 660, t+0.03, 0.05, 'square', 0.14); }
+            else if (kind === 'lock') { tone(sfxGain, 130, t, 0.07, 'square', 0.24); noise(sfxGain, t, 0.05, 0.12); }
+            else if (kind === 'drop') { tone(sfxGain, 90,  t, 0.10, 'sawtooth', 0.26); noise(sfxGain, t, 0.08, 0.16); }
+            else if (kind === 'hold') { tone(sfxGain, 520, t, 0.06, 'triangle', 0.22); }
+            else if (kind === 'clear'){
+                var s = [523.25, 659.25, 783.99, 1046.5];
+                for (var i = 0; i < s.length; i++) { tone(sfxGain, s[i], t + i * 0.05, 0.10, 'square', 0.22); }
+            }
+            else if (kind === 'tetris'){
+                var q = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+                for (var j = 0; j < q.length; j++) { tone(sfxGain, q[j], t + j * 0.045, 0.16, 'square', 0.26); }
+            }
+            else if (kind === 'level'){
+                tone(sfxGain, 659.25, t, 0.09, 'square', 0.24);
+                tone(sfxGain, 880, t + 0.09, 0.09, 'square', 0.24);
+                tone(sfxGain, 1318.5, t + 0.18, 0.18, 'square', 0.24);
+            }
+            else if (kind === 'over'){
+                var n = [440, 392, 349.23, 293.66, 220];
+                for (var k = 0; k < n.length; k++) { tone(sfxGain, n[k], t + k * 0.14, 0.24, 'sawtooth', 0.26); }
+            }
+        }
+
+        /* ══════════════════════════════════════════════
+           2. 테트리스 코어
+           ══════════════════════════════════════════════ */
+        var COLS = 10, ROWS = 20, CELL = 26;
+
+        var SHAPES = {
+            I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+            J: [[1,0,0],[1,1,1],[0,0,0]],
+            L: [[0,0,1],[1,1,1],[0,0,0]],
+            O: [[1,1],[1,1]],
+            S: [[0,1,1],[1,1,0],[0,0,0]],
+            T: [[0,1,0],[1,1,1],[0,0,0]],
+            Z: [[1,1,0],[0,1,1],[0,0,0]]
+        };
+        var COLORS = {
+            I:'#7ee8ff', J:'#6a9bff', L:'#ffb86b', O:'#ffe66b',
+            S:'#7dffb0', T:'#d59bff', Z:'#ff8f8f'
+        };
+        var TYPES = ['I','J','L','O','S','T','Z'];
+
+        var fieldCv = document.getElementById('field');
+        var fx = fieldCv.getContext('2d');
+        var nextCv = document.getElementById('next'), nx = nextCv.getContext('2d');
+        var holdCv = document.getElementById('hold'), hx = holdCv.getContext('2d');
+        var statusPanel = document.getElementById('statusPanel');
+        var keyPanel    = document.getElementById('keyPanel');
+
+        // 고해상도 대응
+        function hidpi(cv, ctx, w, h){
+            var dpr = window.devicePixelRatio || 1;
+            cv.width = w * dpr; cv.height = h * dpr;
+            cv.style.width = w + 'px'; cv.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        hidpi(fieldCv, fx, COLS * CELL, ROWS * CELL);
+        hidpi(nextCv, nx, 80, 80);
+        hidpi(holdCv, hx, 80, 80);
+
+        var game = {
+            grid: null, piece: null, next: null, hold: null, holdUsed: false,
+            bag: [], score: 0, lines: 0, level: 1, best: 0,
+            state: 'ready',           // ready | playing | paused | clearing | over
+            dropTimer: 0, lastTime: 0,
+            flashRows: [], flashUntil: 0
+        };
+
+        try { game.best = parseInt(localStorage.getItem('bbs_tetris_best'), 10) || 0; } catch(e) { game.best = 0; }
+
+        function emptyGrid(){
+            var g = [];
+            for (var y = 0; y < ROWS; y++) {
+                var row = [];
+                for (var x = 0; x < COLS; x++) { row.push(null); }
+                g.push(row);
+            }
+            return g;
+        }
+
+        function refillBag(){
+            var b = TYPES.slice();
+            for (var i = b.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var t = b[i]; b[i] = b[j]; b[j] = t;
+            }
+            game.bag = game.bag.concat(b);
+        }
+        function pullType(){
+            if (game.bag.length === 0) { refillBag(); }
+            return game.bag.shift();
+        }
+
+        function makePiece(type){
+            var sh = SHAPES[type];
+            var m = [];
+            for (var y = 0; y < sh.length; y++) { m.push(sh[y].slice()); }
+            return { type: type, m: m, x: Math.floor((COLS - sh.length) / 2), y: (type === 'I' ? -1 : 0) };
+        }
+
+        function rotated(m, dir){
+            var n = m.length, r = [], y, x;
+            for (y = 0; y < n; y++) { r.push(new Array(n)); }
+            for (y = 0; y < n; y++) {
+                for (x = 0; x < n; x++) {
+                    r[y][x] = (dir > 0) ? m[n - 1 - x][y] : m[x][n - 1 - y];
+                }
+            }
+            return r;
+        }
+
+        function collides(m, px, py){
+            for (var y = 0; y < m.length; y++) {
+                for (var x = 0; x < m[y].length; x++) {
+                    if (!m[y][x]) { continue; }
+                    var gx = px + x, gy = py + y;
+                    if (gx < 0 || gx >= COLS || gy >= ROWS) { return true; }
+                    if (gy >= 0 && game.grid[gy][gx]) { return true; }
+                }
+            }
+            return false;
+        }
+
+        function move(dx){
+            if (game.state !== 'playing') { return; }
+            if (!collides(game.piece.m, game.piece.x + dx, game.piece.y)) {
+                game.piece.x += dx;
+                sfx('move');
+            }
+        }
+
+        function rotate(dir){
+            if (game.state !== 'playing') { return; }
+            var m = rotated(game.piece.m, dir);
+            var kicks = [0, -1, 1, -2, 2];
+            for (var i = 0; i < kicks.length; i++) {
+                if (!collides(m, game.piece.x + kicks[i], game.piece.y)) {
+                    game.piece.m = m;
+                    game.piece.x += kicks[i];
+                    sfx('rot');
+                    return;
+                }
+            }
+        }
+
+        function softDrop(){
+            if (game.state !== 'playing') { return; }
+            if (!collides(game.piece.m, game.piece.x, game.piece.y + 1)) {
+                game.piece.y++;
+                game.score += 1;
+                game.dropTimer = 0;
+            } else {
+                lockPiece();
+            }
+        }
+
+        function hardDrop(){
+            if (game.state !== 'playing') { return; }
+            var d = 0;
+            while (!collides(game.piece.m, game.piece.x, game.piece.y + 1)) {
+                game.piece.y++; d++;
+            }
+            game.score += d * 2;
+            sfx('drop');
+            lockPiece();
+        }
+
+        function holdPiece(){
+            if (game.state !== 'playing' || game.holdUsed) { return; }
+            var cur = game.piece.type;
+            if (game.hold) {
+                game.piece = makePiece(game.hold);
+            } else {
+                game.piece = makePiece(game.next);
+                game.next = pullType();
+            }
+            game.hold = cur;
+            game.holdUsed = true;
+            sfx('hold');
+            if (collides(game.piece.m, game.piece.x, game.piece.y)) { gameOver(); }
+        }
+
+        function dropInterval(){
+            return Math.max(80, 800 - (game.level - 1) * 65);
+        }
+
+        function lockPiece(){
+            var p = game.piece, y, x;
+            for (y = 0; y < p.m.length; y++) {
+                for (x = 0; x < p.m[y].length; x++) {
+                    if (!p.m[y][x]) { continue; }
+                    var gy = p.y + y, gx = p.x + x;
+                    if (gy < 0) { gameOver(); return; }
+                    game.grid[gy][gx] = p.type;
+                }
+            }
+            sfx('lock');
+
+            var full = [];
+            for (y = 0; y < ROWS; y++) {
+                var done = true;
+                for (x = 0; x < COLS; x++) { if (!game.grid[y][x]) { done = false; break; } }
+                if (done) { full.push(y); }
+            }
+
+            if (full.length > 0) {
+                game.flashRows = full;
+                game.flashUntil = performance.now() + 200;
+                game.state = 'clearing';
+                sfx(full.length >= 4 ? 'tetris' : 'clear');
+            } else {
+                spawn();
+            }
+        }
+
+        function finishClear(){
+            var n = game.flashRows.length;
+            for (var i = 0; i < game.flashRows.length; i++) {
+                game.grid.splice(game.flashRows[i], 1);
+                var row = [];
+                for (var x = 0; x < COLS; x++) { row.push(null); }
+                game.grid.unshift(row);
+            }
+            var table = [0, 100, 300, 500, 800];
+            game.score += table[n] * game.level;
+            game.lines += n;
+
+            var newLevel = Math.floor(game.lines / 10) + 1;
+            if (newLevel > game.level) {
+                game.level = newLevel;
+                sfx('level');
+                write('[LEVEL]', 'LEVEL ' + game.level + ' — 낙하 속도가 빨라집니다!');
+            }
+            if (n >= 4) { write('[SCORE]', '★ TETRIS! 4줄 삭제 +' + (800 * game.level)); }
+            else { write('[SCORE]', n + '줄 삭제 +' + (table[n] * game.level)); }
+
+            game.flashRows = [];
+            spawn();
+        }
+
+        function spawn(){
+            game.piece = makePiece(game.next);
+            game.next = pullType();
+            game.holdUsed = false;
+            game.dropTimer = 0;
+            game.state = 'playing';
+            if (collides(game.piece.m, game.piece.x, game.piece.y)) { gameOver(); }
+        }
+
+        function gameOver(){
+            game.state = 'over';
+            stopMusic();
+            sfx('over');
+            if (game.score > game.best) {
+                game.best = game.score;
+                try { localStorage.setItem('bbs_tetris_best', String(game.best)); } catch(e) {}
+                write('[RECORD]', '★ 신기록 달성! ' + game.best + '점');
+            }
+            write('[SYSTEM]', 'GAME OVER — 점수 ' + game.score + ' / ' + game.lines + '줄. 1번으로 재시작.', true);
+        }
+
+        function newGame(){
+            game.grid = emptyGrid();
+            game.bag = [];
+            game.score = 0; game.lines = 0; game.level = 1;
+            game.hold = null; game.holdUsed = false;
+            game.flashRows = []; game.dropTimer = 0;
+            game.next = pullType();
+            spawn();
+            startMusic(true);
+            write('[SYSTEM]', 'NEW GAME — 행운을 빕니다. (P: 일시정지 / M: 배경음)');
+        }
+
+        function togglePause(){
+            if (game.state === 'playing') {
+                game.state = 'paused';
+                stopMusic();
+                write('[SYSTEM]', '일시정지되었습니다. 2번 또는 P로 계속.');
+            } else if (game.state === 'paused') {
+                game.state = 'playing';
+                game.lastTime = performance.now();
+                startMusic(false);
+                write('[SYSTEM]', '게임을 계속합니다.');
+            }
+        }
+
+        /* ══════════════════════════════════════════════
+           3. 렌더링 (아케이드 CRT 감성)
+           ══════════════════════════════════════════════ */
+        function shade(hex, f){
+            var r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
+            r = Math.max(0, Math.min(255, Math.round(r * f)));
+            g = Math.max(0, Math.min(255, Math.round(g * f)));
+            b = Math.max(0, Math.min(255, Math.round(b * f)));
+            return 'rgb(' + r + ',' + g + ',' + b + ')';
+        }
+
+        function drawCell(ctx, cx, cy, size, color, ghost){
+            var p = Math.max(1, Math.floor(size * 0.06));
+            if (ghost) {
+                ctx.strokeStyle = 'rgba(155,211,255,0.45)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx + p + 0.5, cy + p + 0.5, size - p * 2 - 1, size - p * 2 - 1);
+                return;
+            }
+            ctx.fillStyle = shade(color, 0.55);
+            ctx.fillRect(cx + p, cy + p, size - p * 2, size - p * 2);
+            ctx.fillStyle = color;
+            ctx.fillRect(cx + p * 2, cy + p * 2, size - p * 4, size - p * 4);
+            ctx.fillStyle = shade(color, 1.35);
+            ctx.fillRect(cx + p * 2, cy + p * 2, size - p * 4, Math.max(1, p));
+            ctx.fillStyle = shade(color, 0.4);
+            ctx.fillRect(cx + p * 2, cy + size - p * 2 - Math.max(1, p), size - p * 4, Math.max(1, p));
+        }
+
+        function drawGridLines(){
+            fx.strokeStyle = 'rgba(173,219,255,0.05)';
+            fx.lineWidth = 1;
+            for (var x = 1; x < COLS; x++) {
+                fx.beginPath(); fx.moveTo(x * CELL + 0.5, 0); fx.lineTo(x * CELL + 0.5, ROWS * CELL); fx.stroke();
+            }
+            for (var y = 1; y < ROWS; y++) {
+                fx.beginPath(); fx.moveTo(0, y * CELL + 0.5); fx.lineTo(COLS * CELL, y * CELL + 0.5); fx.stroke();
+            }
+        }
+
+        function overlay(title, sub){
+            fx.fillStyle = 'rgba(0,10,26,0.82)';
+            fx.fillRect(0, 0, COLS * CELL, ROWS * CELL);
+            fx.textAlign = 'center';
+            fx.fillStyle = '#ffffff';
+            fx.font = 'bold 26px "Courier New", monospace';
+            fx.fillText(title, COLS * CELL / 2, ROWS * CELL / 2 - 8);
+            fx.fillStyle = '#9bd3ff';
+            fx.font = '13px "Courier New", monospace';
+            for (var i = 0; i < sub.length; i++) {
+                fx.fillText(sub[i], COLS * CELL / 2, ROWS * CELL / 2 + 22 + i * 20);
+            }
+            fx.textAlign = 'left';
+        }
+
+        function render(){
+            fx.fillStyle = 'rgba(0,8,22,0.9)';
+            fx.fillRect(0, 0, COLS * CELL, ROWS * CELL);
+            drawGridLines();
+
+            var y, x;
+            if (game.grid) {
+                for (y = 0; y < ROWS; y++) {
+                    var flashing = game.flashRows.indexOf(y) >= 0;
+                    for (x = 0; x < COLS; x++) {
+                        var t = game.grid[y][x];
+                        if (!t) { continue; }
+                        if (flashing) {
+                            var on = Math.floor(performance.now() / 50) % 2 === 0;
+                            fx.fillStyle = on ? '#ffffff' : '#9bd3ff';
+                            fx.fillRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
+                        } else {
+                            drawCell(fx, x * CELL, y * CELL, CELL, COLORS[t], false);
+                        }
+                    }
+                }
+            }
+
+            if (game.piece && (game.state === 'playing' || game.state === 'paused')) {
+                var p = game.piece;
+                // 고스트
+                var gy = p.y;
+                while (!collides(p.m, p.x, gy + 1)) { gy++; }
+                for (y = 0; y < p.m.length; y++) {
+                    for (x = 0; x < p.m[y].length; x++) {
+                        if (p.m[y][x] && gy + y >= 0) {
+                            drawCell(fx, (p.x + x) * CELL, (gy + y) * CELL, CELL, COLORS[p.type], true);
+                        }
+                    }
+                }
+                for (y = 0; y < p.m.length; y++) {
+                    for (x = 0; x < p.m[y].length; x++) {
+                        if (p.m[y][x] && p.y + y >= 0) {
+                            drawCell(fx, (p.x + x) * CELL, (p.y + y) * CELL, CELL, COLORS[p.type], false);
+                        }
+                    }
+                }
+            }
+
+            if (game.state === 'ready') {
+                overlay('READY?', ['1번 메뉴 또는 아무 키나 눌러', 'GAME START', '', '(c) 1988 GIHUN ARCADE']);
+            } else if (game.state === 'paused') {
+                overlay('PAUSE', ['P 또는 2번으로 계속하기']);
+            } else if (game.state === 'over') {
+                overlay('GAME OVER', ['SCORE  ' + game.score, 'LINES  ' + game.lines, '', '1번 메뉴로 재도전']);
+            }
+
+            drawMini(nx, game.next);
+            drawMini(hx, game.hold);
+            updatePanels();
+        }
+
+        function drawMini(ctx, type){
+            ctx.clearRect(0, 0, 80, 80);
+            ctx.fillStyle = 'rgba(0,8,22,0.6)';
+            ctx.fillRect(0, 0, 80, 80);
+            if (!type) { return; }
+            var sh = SHAPES[type], size = 16;
+            var minX = 99, maxX = -1, minY = 99, maxY = -1, y, x;
+            for (y = 0; y < sh.length; y++) {
+                for (x = 0; x < sh[y].length; x++) {
+                    if (sh[y][x]) {
+                        if (x < minX) { minX = x; } if (x > maxX) { maxX = x; }
+                        if (y < minY) { minY = y; } if (y > maxY) { maxY = y; }
+                    }
+                }
+            }
+            var w = (maxX - minX + 1) * size, h = (maxY - minY + 1) * size;
+            var ox = (80 - w) / 2, oy = (80 - h) / 2;
+            for (y = minY; y <= maxY; y++) {
+                for (x = minX; x <= maxX; x++) {
+                    if (sh[y][x]) {
+                        drawCell(ctx, ox + (x - minX) * size, oy + (y - minY) * size, size, COLORS[type], false);
+                    }
+                }
+            }
+        }
+
+        // 텍스트 BBS 스타일 상태 패널
+        function padLeft(s, n){ s = String(s); while (s.length < n) { s = ' ' + s; } return s; }
+        function boxLine(label, value, width){
+            var inner = ' ' + label + padLeft(value, width - label.length - 2) + ' ';
+            return '│' + inner + '│';
+        }
+        function updatePanels(){
+            var W = 20;
+            var bar = '';
+            for (var i = 0; i < W; i++) { bar += '─'; }
+            var stateTxt = { ready:'READY', playing:'PLAY', paused:'PAUSE', clearing:'PLAY', over:'OVER' }[game.state];
+            var lines = [
+                '┌' + bar + '┐',
+                boxLine('SCORE', padLeft(game.score, 8), W),
+                boxLine('LINES', padLeft(game.lines, 8), W),
+                boxLine('LEVEL', padLeft(game.level, 8), W),
+                boxLine('BEST ', padLeft(game.best, 8), W),
+                '├' + bar + '┤',
+                boxLine('STATE', stateTxt, W),
+                boxLine('BGM  ', (musicOn ? 'ON ' : 'OFF'), W),
+                boxLine('SFX  ', (sfxOn ? 'ON ' : 'OFF'), W),
+                '└' + bar + '┘'
+            ];
+            statusPanel.textContent = lines.join('\n');
+        }
+
+        keyPanel.textContent = [
+            '┌─ KEY MAP ────────┐',
+            '│ ← →   좌우 이동  │',
+            '│ ↓     소프트드롭 │',
+            '│ ↑ / X 회전       │',
+            '│ Z     역회전     │',
+            '│ SPACE 하드드롭   │',
+            '│ C     홀드       │',
+            '│ P     일시정지   │',
+            '│ M     배경음     │',
+            '└──────────────────┘'
+        ].join('\n');
+
+        /* ══════════════════════════════════════════════
+           4. 루프
+           ══════════════════════════════════════════════ */
+        function loop(now){
+            var dt = now - (game.lastTime || now);
+            game.lastTime = now;
+
+            if (game.state === 'playing') {
+                game.dropTimer += dt;
+                if (game.dropTimer >= dropInterval()) {
+                    game.dropTimer = 0;
+                    if (!collides(game.piece.m, game.piece.x, game.piece.y + 1)) {
+                        game.piece.y++;
+                    } else {
+                        lockPiece();
+                    }
+                }
+            } else if (game.state === 'clearing') {
+                if (now >= game.flashUntil) { finishClear(); }
+            }
+
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        /* ══════════════════════════════════════════════
+           5. 입력 : 키보드 / 메뉴 / 커맨드
+           ══════════════════════════════════════════════ */
+        var GAME_KEYS = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Spacebar','z','Z','x','X','c','C','p','P','m','M'];
+
+        function handleKey(key){
+            if (game.state === 'ready') {
+                newGame();
+                return;
+            }
+            switch (key) {
+                case 'ArrowLeft':  move(-1); break;
+                case 'ArrowRight': move(1); break;
+                case 'ArrowDown':  softDrop(); break;
+                case 'ArrowUp':
+                case 'x': case 'X': rotate(1); break;
+                case 'z': case 'Z': rotate(-1); break;
+                case ' ': case 'Spacebar': hardDrop(); break;
+                case 'c': case 'C': holdPiece(); break;
+                case 'p': case 'P': togglePause(); break;
+                case 'm': case 'M': toggleMusic(); break;
+            }
+        }
+
+        document.addEventListener('keydown', function(e){
+            if (GAME_KEYS.indexOf(e.key) === -1) { return; }
+            e.preventDefault();           // 스크롤 및 입력창 오염 방지
+            handleKey(e.key);
+        });
+
+        var padBtns = document.querySelectorAll('.pad .btn');
+        for (var pb = 0; pb < padBtns.length; pb++) {
+            (function(btn){
+                btn.addEventListener('click', function(){ handleKey(btn.getAttribute('data-key')); });
+            })(padBtns[pb]);
+        }
+
+        function toggleMusic(){
+            musicOn = !musicOn;
+            if (musicOn) {
+                if (game.state === 'playing') { startMusic(false); }
+                write('[SYSTEM]', '배경음을 켰습니다. ♪ 코로베이니키');
+            } else {
+                stopMusic();
+                write('[SYSTEM]', '배경음을 껐습니다.');
+            }
+        }
+
+        function setActive(id){
+            for (var i = 0; i < menuItems.length; i++) {
+                var on = menuItems[i].getAttribute('data-id') === id;
+                menuItems[i].classList.toggle('active', on);
+                menuItems[i].setAttribute('aria-current', on ? 'true' : 'false');
+            }
+        }
+
+        function doMenu(id){
+            switch (id) {
+                case '1':
+                    setActive('1'); newGame(); break;
+                case '2':
+                    setActive('2');
+                    if (game.state === 'ready' || game.state === 'over') {
+                        write('[SYSTEM]', '진행 중인 게임이 없습니다. 1번으로 시작하세요.', true);
+                    } else { togglePause(); }
+                    break;
+                case '3':
+                    setActive('3'); toggleMusic(); break;
+                case '4':
+                    setActive('4');
+                    sfxOn = !sfxOn;
+                    write('[SYSTEM]', '효과음을 ' + (sfxOn ? '켰습니다.' : '껐습니다.'));
+                    if (sfxOn) { sfx('rot'); }
+                    break;
+                case '5':
+                    setActive('5');
+                    write('', '--------------------------------------------------------------');
+                    write('', '▶ 5. 조작법');
+                    write('', '   ← →  좌우 이동      ↓  소프트드롭(+1점)');
+                    write('', '   ↑/X  시계방향 회전  Z  반시계방향 회전');
+                    write('', '   SPACE 하드드롭(+2점/칸)   C 홀드   P 일시정지   M 배경음');
+                    write('', '   10줄마다 레벨업 — 낙하 속도와 배경음 템포가 함께 빨라집니다.');
+                    write('[SYSTEM]', '조작법을 표시했습니다.');
+                    break;
+                case '9':
+                    setActive('9');
+                    write('[SYSTEM]', 'BBS 메인 화면으로 돌아갑니다...');
+                    stopMusic();
+                    setTimeout(function(){ window.location.href = 'webpage.html'; }, 350);
+                    break;
+                default:
+                    write('[ERROR]', '잘못된 번호입니다: "' + id + '" — 1~5 또는 9를 입력하세요.', true);
+            }
+        }
+
+        for (var mi = 0; mi < menuItems.length; mi++) {
+            (function(item){
+                item.addEventListener('click', function(){ doMenu(item.getAttribute('data-id')); });
+                item.addEventListener('keydown', function(e){
+                    if (e.key === 'Enter') { e.preventDefault(); doMenu(item.getAttribute('data-id')); }
+                });
+            })(menuItems[mi]);
+        }
+
+        function handleInput(){
+            var v = input.value.trim();
+            input.value = '';
+            input.focus();
+            if (!v) { return; }
+            write('', 'guest@bbs:~/tetris$ ' + v);
+            doMenu(v);
+        }
+        input.addEventListener('keydown', function(e){
+            if (e.key === 'Enter') { e.preventDefault(); handleInput(); }
+        });
+        goBtn.addEventListener('click', handleInput);
+
+        // 캔버스 클릭으로도 시작/재개
+        fieldCv.addEventListener('click', function(){
+            if (game.state === 'ready' || game.state === 'over') { newGame(); }
+            else if (game.state === 'paused') { togglePause(); }
+        });
+
+        /* ══════════════════════════════════════════════
+           6. 초기화
+           ══════════════════════════════════════════════ */
+        caption.textContent = '접속: ' + formatNow() + '  |  사용자: guest  |  게임: TETRIS v1.0';
+        game.grid = emptyGrid();
+        game.next = pullType();
+        write('[SYSTEM]', '오락실 테트리스에 접속했습니다. 1번 메뉴 또는 아무 키나 눌러 시작하세요.');
+        write('[SYSTEM]', '배경음은 브라우저 정책상 첫 조작 이후에 재생됩니다. ♪');
+        input.focus();
+        requestAnimationFrame(loop);
+    })();
+    </script>
+</body>
+</html>
