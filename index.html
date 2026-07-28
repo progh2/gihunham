@@ -298,12 +298,23 @@
                                     ollamaConnected = true;
                                     activeEndpoint = ep;
                                     var modelNames = data.models.map(function(m){ return m.name; });
-                                    var preferred = ['phi3:latest', 'gemma3:12b', 'qwen3.6:latest', 'llava:latest', 'orca2:latest'];
-                                    ollamaModel = modelNames[0];
-                                    for (var p = 0; p < preferred.length; p++) {
-                                        if (modelNames.indexOf(preferred[p]) >= 0) {
-                                            ollamaModel = preferred[p];
+                                    var gemmaModel = null;
+                                    for (var g = 0; g < modelNames.length; g++) {
+                                        if (modelNames[g].toLowerCase().indexOf('gemma') >= 0) {
+                                            gemmaModel = modelNames[g];
                                             break;
+                                        }
+                                    }
+                                    if (gemmaModel) {
+                                        ollamaModel = gemmaModel;
+                                    } else {
+                                        var preferred = ['phi3:latest', 'qwen3.6:latest', 'llava:latest', 'orca2:latest'];
+                                        ollamaModel = modelNames[0];
+                                        for (var p = 0; p < preferred.length; p++) {
+                                            if (modelNames.indexOf(preferred[p]) >= 0) {
+                                                ollamaModel = preferred[p];
+                                                break;
+                                            }
                                         }
                                     }
                                     if (verbose) {
