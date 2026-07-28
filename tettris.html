@@ -151,7 +151,7 @@
         'use strict';
 
         /* ══════════════════════════════════════════════
-           0. 공통 DOM / 로그 (webpage.html 과 동일 규약)
+           0. 공통 DOM / 로그 (index.html 과 동일 규약)
            ══════════════════════════════════════════════ */
         var menuItems   = document.querySelectorAll('.menu .item');
         var boardEl     = document.getElementById('board');
@@ -908,7 +908,7 @@
                     setActive('9');
                     write('[SYSTEM]', 'BBS 메인 화면으로 돌아갑니다...');
                     stopMusic();
-                    setTimeout(function(){ window.location.href = 'webpage.html'; }, 350);
+                    setTimeout(function(){ window.location.href = 'index.html'; }, 350);
                     break;
                 default:
                     write('[ERROR]', '잘못된 번호입니다: "' + id + '" — 1~5 또는 9를 입력하세요.', true);
