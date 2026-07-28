@@ -249,7 +249,10 @@
             // ── Ollama API & 방명록 관리 ─────────────
             var currentPage = '1';
             var ollamaConnected = false;
-            var ollamaModel = 'gemma';
+            var ollamaModel = '';
+            var activeEndpoint = '';
+            var ollamaEndpoints = ['http://127.0.0.1:11434', 'http://localhost:11434'];
+            var lastOllamaError = '';
             var retroFallbacks = [
                 "반갑네! 오늘 하루도 즐거운 PC통신 생활 되게나 ^^",
                 "오호~ 좋은 글이구먼! 하이텔 게시판 자주 찾아주게나.",
@@ -258,23 +261,74 @@
                 "크으~ 통신 환경 좋군요! 편하게 대화 나누세요."
             ];
 
-            function checkOllama(){
-                try {
-                    var controller = new AbortController();
-                    var timer = setTimeout(function(){ controller.abort(); }, 1500);
-                    fetch('http://localhost:11434/api/tags', { signal: controller.signal })
-                        .then(function(r){ return r.json(); })
-                        .then(function(data){
-                            clearTimeout(timer);
-                            if (data && data.models && data.models.length > 0) {
-                                ollamaConnected = true;
-                                ollamaModel = data.models[0].name;
-                            }
-                        })
-                        .catch(function(){ ollamaConnected = false; });
-                } catch(e) { ollamaConnected = false; }
+            function checkOllama(verbose){
+                ollamaConnected = false;
+                lastOllamaError = '';
+                var isHttps = window.location.protocol === 'https:';
+
+                if (verbose) {
+                    write('[DIAGNOSTIC]', '--- [ Ollama API 접속 상태 진단 시작 ] ---');
+                    write('[DIAGNOSTIC]', '현재 접속 프로토콜: ' + window.location.protocol);
+                    if (isHttps) {
+                        write('[WARNING]', '⚠️ HTTPS(GitHub Pages) 배포 환경에서는 브라우저 보안 규정(Mixed Content)으로 인해 로컬 HTTP(127.0.0.1) API 호출이 차단될 수 있습니다.', true);
+                        write('[TIP]', '👉 로컬 파일(file://...) 또는 로컬 웹서버(http://localhost:8000)에서 열면 100% 정상 연동됩니다.');
+                    }
+                }
+
+                function tryEndpoint(idx){
+                    if (idx >= ollamaEndpoints.length) {
+                        if (verbose && !ollamaConnected) {
+                            write('[DIAGNOSTIC]', '❌ 엔드포인트 (127.0.0.1 / localhost) 연결 불가능.');
+                            write('[TIP]', '💡 Ollama가 실행 중인데 브라우저 연동이 안 된다면 CORS 설정이 필요합니다:\n    PowerShell: $env:OLLAMA_ORIGINS="*"; ollama serve');
+                        }
+                        return;
+                    }
+                    var ep = ollamaEndpoints[idx];
+                    if (verbose) write('[DIAGNOSTIC]', '엔드포인트 시도 (' + (idx+1) + '/' + ollamaEndpoints.length + '): ' + ep + '/api/tags');
+
+                    try {
+                        var controller = new AbortController();
+                        var timer = setTimeout(function(){ controller.abort(); }, 2500);
+
+                        fetch(ep + '/api/tags', { signal: controller.signal })
+                            .then(function(r){ return r.json(); })
+                            .then(function(data){
+                                clearTimeout(timer);
+                                if (data && data.models && data.models.length > 0) {
+                                    ollamaConnected = true;
+                                    activeEndpoint = ep;
+                                    var modelNames = data.models.map(function(m){ return m.name; });
+                                    var preferred = ['phi3:latest', 'gemma3:12b', 'qwen3.6:latest', 'llava:latest', 'orca2:latest'];
+                                    ollamaModel = modelNames[0];
+                                    for (var p = 0; p < preferred.length; p++) {
+                                        if (modelNames.indexOf(preferred[p]) >= 0) {
+                                            ollamaModel = preferred[p];
+                                            break;
+                                        }
+                                    }
+                                    if (verbose) {
+                                        write('[OLLAMA SUCCESS]', '✅ Ollama 연결 성공! 엔드포인트: ' + activeEndpoint);
+                                        write('[OLLAMA SUCCESS]', '감지된 모델 목록: ' + modelNames.join(', '));
+                                        write('[OLLAMA SUCCESS]', '사용 모델: [' + ollamaModel + ']');
+                                    }
+                                }
+                            })
+                            .catch(function(err){
+                                clearTimeout(timer);
+                                lastOllamaError = String(err);
+                                if (verbose) {
+                                    write('[ERROR]', ep + ' 접속 실패: ' + err, true);
+                                }
+                                tryEndpoint(idx + 1);
+                            });
+                    } catch(e) {
+                        tryEndpoint(idx + 1);
+                    }
+                }
+
+                tryEndpoint(0);
             }
-            checkOllama();
+            checkOllama(false);
 
             function getStoredGuestbook(){
                 try {
@@ -296,9 +350,9 @@
             function generateAiReply(userText){
                 write('[SYSTEM]', '방장 [sysop] 님이 답글을 작성 중입니다...');
                 var label = ollamaConnected ? 'sysop (Ollama AI:' + ollamaModel + ')' : 'sysop (AI)';
-                if (ollamaConnected) {
+                if (ollamaConnected && activeEndpoint) {
                     var promptText = "너는 1990년대 한국 PC통신(하이텔/나우누리)의 BBS 방장 [sysop]이야. 90년대 통신 말투(예: ^^, ~습니다, 껄껄, 반갑네 등)로 방문자에게 정감있게 2문장 이내로 답해줘.\n\n방문자: " + userText + "\n\nsysop:";
-                    fetch('http://localhost:11434/api/generate', {
+                    fetch(activeEndpoint + '/api/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ model: ollamaModel, prompt: promptText, stream: false })
@@ -312,7 +366,8 @@
                         write(label, reply);
                         playBeepSound();
                     })
-                    .catch(function(){
+                    .catch(function(err){
+                        write('[OLLAMA WARNING]', 'Ollama API 호출 중 오류 발생 (' + err + '). 시뮬레이션 모드로 전환합니다.');
                         var reply = retroFallbacks[Math.floor(Math.random() * retroFallbacks.length)];
                         var msgs = getStoredGuestbook();
                         msgs.push({ user: 'sysop (AI)', text: reply });
@@ -380,9 +435,10 @@
                     write('', '   하단 입력창에 메시지를 입력하고 Enter를 누르면 방명록에 저장되며,');
                     write('', '   방장 [sysop] AI 페르소나가 대화에 응답합니다.');
                     if (ollamaConnected) {
-                        write('[OLLAMA]', '★ 로컬 Ollama API 감지됨! 모델: [' + ollamaModel + '] 연결 완료.');
+                        write('[OLLAMA]', '★ 로컬 Ollama API 연결 완료! 엔드포인트: ' + activeEndpoint + ' | 사용 모델: [' + ollamaModel + ']');
                     } else {
-                        write('[SYSTEM]', 'ℹ 로컬호스트 Ollama (localhost:11434) 미연동 — 레트로 챗봇 모드로 실행됩니다.');
+                        write('[SYSTEM]', 'ℹ 로컬호스트 Ollama (127.0.0.1:11434) 미연동 — 레트로 챗봇 모드로 실행됩니다.');
+                        write('[SYSTEM]', 'ℹ Ollama 연동 상태를 진단하려면 하단에 "ollama" 또는 "9"를 입력하세요.');
                     }
                     write('', '--- [ 방 명 록 목 록 ] ---');
                     var guestMsgs = getStoredGuestbook();
@@ -436,6 +492,13 @@
                 input.value = '';
                 input.focus();
                 if (!v) { return; }
+
+                // "ollama" 또는 "9" 입력 시 Ollama 진단 수행
+                if (v.toLowerCase() === 'ollama' || v === '9') {
+                    write('', 'guest@bbs:~$ ' + v);
+                    checkOllama(true);
+                    return;
+                }
 
                 // 단일 메뉴 번호 입력 시 해당 페이지로 이동
                 if (['0','1','2','3','4','5','6','7','8'].indexOf(v) >= 0) {
